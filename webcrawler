@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+import socket
+import sys
+
+def getCookie():
+  HOST = 'webcrawler-site.ccs.neu.edu'
+
+  PORT = 80
+
+  DATA = (f"POST /accounts/login/ HTTP/1.0\r\n" # send headers
+  "HOST: webcrawler-site.ccs.neu.edu\r\n"
+  "Accept: *\r\n"
+  "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n"
+  "Referer: http://webcrawler-site.ccs.neu.edu\r\n"
+  "\r\n" # blank line seperating headers from body 
+  "id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=bcgpB18eQKTOGObovtBzG5ttFOSzSvEy4etOVmKW9qts0jYkDRHVzlJLlJxdBt1j\r\n".encode('utf-8'))  #actual post payload data
+
+  client = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+  client.connect(( HOST, PORT ))
+  client.send(DATA)
+  response = client.recv(4096)
+  print("response ", response)
+
+def main():
+  print("Valid")
+  getCookie()
+  
+if __name__ == "__main__":
+  if not(len(sys.argv) == 3):
+    sys.exit("Usage: ./webcrawler [username] [password]")
+  
+  main()
