@@ -10,19 +10,19 @@ def getCookie():
   client.connect(( HOST, PORT ))
 
   #Retrieve csrf token
-  GET_REQUEST = (f"GET /accounts/login/ HTTP/1.1\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
+  GET_REQUEST = (f"GET /accounts/login/ HTTP/1.0\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
   client.sendall(GET_REQUEST)
   response = bytes.decode(client.recv(4096))
   index = response.index("csrf")
-  cookie = response[index+10:index+74]
-
+  csrfToken = response[index+10:index+74]
+  
   POST_REQUEST = (f"POST /accounts/login/ HTTP/1.0\r\n" # send headers
   "HOST: webcrawler-site.ccs.neu.edu\r\n"
   "Accept: *\r\n"
   "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n"
-  "Referer: http://webcrawler-site.ccs.neu.edu\r\n"
+  "Referer: http://webcrawler-site.ccs.neu.edu\r\n\r\n"
   "\r\n" # blank line seperating headers from body 
-  "id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=" + cookie + "\r\n").encode('utf-8')  #actual post payload data
+  "id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=" + csrfToken + "\r\n").encode('utf-8')  #actual post payload data
   client.sendall(POST_REQUEST)
   response = bytes.decode(client.recv(4096))
   print("response2 ", response)
