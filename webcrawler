@@ -2,20 +2,22 @@
 import socket
 import sys
 
+# Method used to retrieeve the log in cookie that will help us stay logged in.
 def getCookie():
-  #Setting up the host
+  # Setting up the connection.
   HOST = 'webcrawler-site.ccs.neu.edu'
   PORT = 80
   client = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
   client.connect(( HOST, PORT ))
 
-  #Retrieve csrf token
+  # Retrieve csrf token from the current login page.
   GET_REQUEST = (f"GET /accounts/login/ HTTP/1.0\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
   client.sendall(GET_REQUEST)
   response = bytes.decode(client.recv(4096))
   index = response.index("csrf")
   csrfToken = response[index+10:index+74]
   
+  # Post request with the current csrf token to sign into fakebook.
   POST_REQUEST = (f"POST /accounts/login/ HTTP/1.0\r\n" # send headers
   "HOST: webcrawler-site.ccs.neu.edu\r\n"
   "Accept: *\r\n"
@@ -26,13 +28,15 @@ def getCookie():
   client.sendall(POST_REQUEST)
   response = bytes.decode(client.recv(4096))
   print("response2 ", response)
-  
+ 
+# Main method for this webcrawler. 
+# Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
-  print("Valid")
   getCookie()
   
 if __name__ == "__main__":
+  # Command line specification enforcing.
   if not(len(sys.argv) == 3):
     sys.exit("Usage: ./webcrawler [username] [password]")
-  
+  # Call the main method.
   main()
