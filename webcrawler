@@ -13,18 +13,27 @@ def getCookie():
   # Retrieve csrf token from the current login page.
   GET_REQUEST = (f"GET /accounts/login/ HTTP/1.0\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
   client.sendall(GET_REQUEST)
-  response = bytes.decode(client.recv(4096))
-  index = response.index("csrf")
-  csrfToken = response[index+10:index+74]
-  
+  response = bytes.decode(client.recv(10000))
+  response2 = bytes.decode(client.recv(10000))
+  index1 = response.index("csrf")
+  index2 = response2.index("csrf")
+  csrfToken1 = response[index1+10:index1+74]
+  csrfToken2 = response2[index2+28:index2+92]
+  #print("GET, ", response, response2)
+  #print("csrfToken, ", csrfToken1)
+
   # Post request with the current csrf token to sign into fakebook.
-  POST_REQUEST = (f"POST /accounts/login/ HTTP/1.0\r\n" # send headers
+  POST_REQUEST = (f"POST /accounts/login/ HTTP/1.0\r\n"
   "HOST: webcrawler-site.ccs.neu.edu\r\n"
   "Accept: *\r\n"
-  "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n"
-  "Referer: http://webcrawler-site.ccs.neu.edu\r\n\r\n"
-  "\r\n" # blank line seperating headers from body 
-  "id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=" + csrfToken + "\r\n").encode('utf-8')  #actual post payload data
+  "Origin: http://webcrawler-site.ccs.neu.edu\r\n"
+  "Cookie: " + csrfToken1 + "\r\n"
+  "Accept-Language: en-us\r\n"
+  "Content-Type: text/html; charset=utf-8\r\n"
+  "Referer: http://webcrawler-site.ccs.neu.edu/accounts/login/?next=/Fakebook/\r\n"
+  "Connection: keep-alive\r\n"
+  "\r\n"
+  "id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=" + csrfToken1 + "\r\n").encode('utf-8')
   client.sendall(POST_REQUEST)
   response = bytes.decode(client.recv(4096))
   print("response2 ", response)
