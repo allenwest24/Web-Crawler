@@ -13,39 +13,47 @@ def getCookie():
   # Retrieve csrf token from the current login page.
   GET_REQUEST = (f"GET /accounts/login/ HTTP/1.0\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
   client.sendall(GET_REQUEST)
-  response = bytes.decode(client.recv(1750))
-  response2 = bytes.decode(client.recv(970))
-  print("response 1", response)
-  print("response 2", response2)
-  index1 = response.index("csrf")
-  index2 = response2.index("csrf")
-  #print("index 1", index1)
-  #print("index 2", index2)
-  #token from header
+  # Receive header.
+  response = bytes.decode(client.recv(4096))
+  print( "GET response", response)
+  # Receieve body.
+  #response2 = bytes.decode(client.recv(970))
+  # Find csrftoken in header.
+  index1 = response.index("csrftoken")
+  # Find csrftoken in body.
+  index2 = response.index("csrfmiddlewaretoken")
+  #print("get response part 2", response2)
+  
+  # CSRFToken pulled from header of initial GET request.
   csrfToken1 = response[index1+10:index1+74]
-  #token from body
-  csrfToken2 = response2[index2+28:index2+92]
-  #print("GET, ", response, response2)
-  #print("csrfToken, ", csrfToken1, csrfToken2)
+  # CSRFToken pulled from the hidden csrfmiddlewaretoken field in body of initial GET request.
+  csrfToken2 = response[index2+28:index2+92]
+  print("csrftoken in header of get response: ", csrfToken1)
+  print("csrftoken in hidden body field of get response: ", csrfToken2)
 
   # Post request with the current csrf token to sign into fakebook.
-  usernamePass = "username=bolger.i&password=FWCOZKT0LHX2US5R"
-  POST_REQUEST = (f"POST /accounts/login/ HTTP/1.0\r\n"
+  usernamePass = "username=" + sys.argv[1] + "&password=" + sys.argv[2]
+  payload = "" + usernamePass + "&csrfmiddlewaretoken=" + csrfToken2 + "&next=\r\n"
+  POST_REQUEST = (f"POST /accounts/login/ HTTP/1.1\r\n"
   "Host: webcrawler-site.ccs.neu.edu\r\n"
-  "Content-Length: 798\r\n"
-  "Connection: keep-alive\r\n"
-  "Content-Type: application/x-www-form-urlencoded\r\n"
+  "Accept-Encoding: gzip, deflate\r\n"
   "Referer: http://webcrawler-site.ccs.neu.edu/accounts/login/\r\n"
-  "Cookie: " + "csrftoken=" + str(csrfToken1) + "\r\n"
-  #identity/n/
-  "Accept-Encoding: " + usernamePass + "&csrfmiddlewaretoken=" + str(csrfToken2) + "&next=/Fakebook/\r\n").encode('ascii')
-  #"Origin: http://webcrawler-site.ccs.neu.edu\r\n"
-  #"Accept-Language: en-us\r\n"
-  #"\r\n"
-  #"id_username=bolger.i&id_password=FWCOZKT0LHX2US5R&csrfmiddlewaretoken=" + csrfToken2 + "\r\n").encode('utf-8')
+  "Content-Type: application/x-www-form-urlencoded\r\n"
+  "Content-Length: " + str(len(payload)) + "\r\n"
+  "Origin: http://webcrawler-site.ccs.neu.edu\r\n"
+  "Connection: keep-alive\r\n"
+  "Cookie: csrftoken=" + csrfToken1 + "\r\n"
+  "Upgrade-Insecure-Requests: 1\r\n"
+  "\r\n"
+  + payload + "\r\n")
+  print("post req raw: ", str(len(payload)))
+
+  POST_REQUEST = POST_REQUEST.encode('ascii')
+
+  # Send the Post request.
   client.sendall(POST_REQUEST)
-  response3 = bytes.decode(client.recv(4096))
-  print("response3 ", response3)
+  postResponse = bytes.decode(client.recv(4096))
+  print("POST response:", postResponse)
  
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
