@@ -1,0 +1,15 @@
+POST /accounts/login/ HTTP/1.1
+Host: webcrawler-site.ccs.neu.edu
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://webcrawler-site.ccs.neu.edu/accounts/login/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 119
+Origin: http://webcrawler-site.ccs.neu.edu
+Connection: keep-alive
+Cookie: csrftoken=YBzbqBCniqDIv8frNAgs6NEnOMkQMESbCtQnBuSUFtgMiPLmxeOT4IYBmE6kLgj7
+Upgrade-Insecure-Requests: 1
+
+username=ajdd&password=fjfjf&csrfmiddlewaretoken=TUcdYC9eJ7ng6n2PHXy21vaXESRhrQ85xMtp9vpL6a0kT4yKrB6tZqubcKDLqsz1&next=
