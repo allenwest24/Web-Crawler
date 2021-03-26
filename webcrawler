@@ -2,27 +2,42 @@
 import socket
 import sys
 
+# Generic GET request. If not the first time, then add the csrftoken and sessionID.
+def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = None):
+    # Construct the GET request.
+    get_req = (f"GET " + url + " HTTP/1.1\r\n"
+    "Host: webcrawler-site.ccs.neu.edu\r\n")
+    if not loginHuh:
+        get_req += "Cookie: " + csrfToken + "\r\n"
+        get_req += "Cookie: " + sessionID + "\r\n"
+    get_req += "\r\n"
+
+    # Encode and send the previosuly constructed GET request.
+    get_req = get_req.encode('ascii')
+    connection.sendall(get_req)
+    
+    # Return the response we get from the GET request.
+    response = bytes.decode(connection.recv(4096))
+    return response
+
 # Method used to retrieeve the log in cookie that will help us stay logged in.
-def getCookie():
+def login():
   # Setting up the connection.
   HOST = 'webcrawler-site.ccs.neu.edu'
   PORT = 80
-  client = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
-  client.connect(( HOST, PORT ))
+  connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+  connection.connect(( HOST, PORT ))
 
-  # Retrieve csrf token from the current login page.
-  GET_REQUEST = (f"GET /accounts/login/ HTTP/1.1\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
-  client.sendall(GET_REQUEST)
-  # Get the GET response.
-  response = bytes.decode(client.recv(4096))
+  # Retrieve the GET response and pull both csrf tokens from the login page.
+  response = sendGET(connection, "/accounts/login/", True)
   # Find csrftoken lcoated in header.
-  index1 = response.index("csrftoken")
+  csrf1index = response.index("csrftoken")
   # Find csrftoken in body.
-  index2 = response.index("csrfmiddlewaretoken")
+  csrf2index = response.index("csrfmiddlewaretoken")
   # CSRFToken pulled from header of initial GET request.
-  csrfToken1 = response[index1+10:index1+74]
+  csrfToken1 = response[csrf1index + 10 : csrf1index + 74]
   # CSRFToken pulled from the hidden csrfmiddlewaretoken field in body of initial GET request.
-  csrfToken2 = response[index2+28:index2+92]
+  csrfToken2 = response[csrf2index + 28 : csrf2index + 92]
 
   # Forge the POST request with the current csrf token to sign into fakebook.
   usernamePass = "username=" + sys.argv[1] + "&password=" + sys.argv[2]
@@ -42,14 +57,22 @@ def getCookie():
   POST_REQUEST = POST_REQUEST.encode('ascii')
 
   # Send the Post request.
-  client.sendall(POST_REQUEST)
-  postResponse = bytes.decode(client.recv(4096))
-  print("POST response:", postResponse)
+  connection.sendall(POST_REQUEST)
+  postResponse = bytes.decode(connection.recv(4096))
+
+  # Give me the cookie and the sessionID.
+  cookieIndex = postResponse.index("csrftoken")
+  sessionIDIndex = postResponse.index("sessionid")
+  cookie = postResponse[cookieIndex + 10 : cookieIndex + 74]
+  sessionID = postResponse[sessionIDIndex + 10 : sessionIDIndex + 42]
+  return cookie, sessionID
  
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
-  getCookie()
+  cookie, sessionID = login()
+  print("Cookie: ", cookie)
+  print("SessionID: ", sessionID)
   
 if __name__ == "__main__":
   # Command line specification enforcing.
