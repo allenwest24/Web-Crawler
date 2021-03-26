@@ -2,14 +2,33 @@
 import socket
 import sys
 
+# Our data structures. Dict to store sites we've seen and an array to provide a fresh url we previously found.
+links_to_parse = {}
+queue = []
+
+# TODO: Implement.
+# Searches given html for one of 5 flags.
+def find_flags(html):
+    print("no flag found here")
+
+# This grabs links on the html we are feeding it if it's not already in the dict.
+def grab_links(html):
+  stuff = html.split('\n')
+  for line in stuff:
+      if "/fakebook/" in line:
+        temp = line.split('"')
+        if len(temp) > 1:
+            if temp[1] not in links_to_parse:
+              links_to_parse[temp[1]] = False
+              queue.append(temp[1])
+
 # Generic GET request. If not the first time, then add the csrftoken and sessionID.
 def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = None):
     # Construct the GET request.
     get_req = (f"GET " + url + " HTTP/1.1\r\n"
     "Host: webcrawler-site.ccs.neu.edu\r\n")
     if not loginHuh:
-        get_req += "Cookie: " + csrfToken + "\r\n"
-        get_req += "Cookie: " + sessionID + "\r\n"
+        get_req += "Cookie: csrftoken=" + csrfToken + "; sessionid=" + sessionID + "\r\n"
     get_req += "\r\n"
 
     # Encode and send the previosuly constructed GET request.
@@ -65,14 +84,36 @@ def login():
   sessionIDIndex = postResponse.index("sessionid")
   cookie = postResponse[cookieIndex + 10 : cookieIndex + 74]
   sessionID = postResponse[sessionIDIndex + 10 : sessionIDIndex + 42]
-  return cookie, sessionID
+  return cookie, sessionID, connection
  
+# Iterate through a built up list of urls in a queue and update them in a dict when they get searched.
+def iterate_through(connection, html, cookie, sessionID):
+    # Do the initial html functions on our home page.
+    grab_links(html)
+    find_flags(html)
+
+    # TODO: Change the way we add new urls to our queue so that this doesn't have to be recursive.
+    # While we still have flags to find and links to explore in our queue.
+    while len(queue) > 0:
+      curr_in_queue = queue[0]
+      # Send GET request to pull down the html for the current url.
+      currhtml = sendGET(connection, curr_in_queue, cookie, sessionID)
+      # Search the new html page for new links.
+      grab_links(currhtml)
+      # Search the new html page for flags.
+      find_flags(currhtml)
+      # Update our data structures.
+      links_to_parse[curr_in_queue] = True
+      queue.pop(0)
+      print(links_to_parse)
+      print(queue)
+
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
-  cookie, sessionID = login()
-  print("Cookie: ", cookie)
-  print("SessionID: ", sessionID)
+  cookie, sessionID, connection = login()
+  initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
+  iterate_through(connection, initialHTML, cookie, sessionID)
   
 if __name__ == "__main__":
   # Command line specification enforcing.
