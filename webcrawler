@@ -5,11 +5,14 @@ import sys
 # Our data structures. Dict to store sites we've seen and an array to provide a fresh url we previously found.
 links_to_parse = {}
 queue = []
+flags_found = []
 
-# TODO: Implement.
 # Searches given html for one of 5 flags.
 def find_flags(html):
-    print("no flag found here")
+    stuff = html.split('\n')
+    for line in stuff:
+        if "secret_flag" in line:
+            flags_found.append(line)
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
@@ -33,8 +36,7 @@ def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = Non
 
     # Encode and send the previosuly constructed GET request.
     get_req = get_req.encode('ascii')
-    connection.sendall(get_req)
-    
+    connection.sendall(get_req) 
     # Return the response we get from the GET request.
     response = bytes.decode(connection.recv(4096))
     return response
@@ -46,8 +48,9 @@ def login():
   PORT = 80
   connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
   connection.connect(( HOST, PORT ))
-
+  #response = ""
   # Retrieve the GET response and pull both csrf tokens from the login page.
+  #while "csrfmiddlewaretoken" not in response or "csrftoken" not in response:
   response = sendGET(connection, "/accounts/login/", True)
   # Find csrftoken lcoated in header.
   csrf1index = response.index("csrftoken")
@@ -75,9 +78,12 @@ def login():
   + payload + "\r\n")
   POST_REQUEST = POST_REQUEST.encode('ascii')
 
+  #postResponse = ""
   # Send the Post request.
+  #while "csrftoken" not in postResponse or "sessionid" not in postResponse:
   connection.sendall(POST_REQUEST)
   postResponse = bytes.decode(connection.recv(4096))
+  print(postResponse)
 
   # Give me the cookie and the sessionID.
   cookieIndex = postResponse.index("csrftoken")
@@ -98,6 +104,9 @@ def iterate_through(connection, html, cookie, sessionID):
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
       currhtml = sendGET(connection, curr_in_queue, False, cookie, sessionID)
+      #if '<' not in currhtml:
+      #    cookie, sessionID, connection = login()
+      #    print(curr_in_queue, str(len(currhtml)))
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
@@ -105,8 +114,8 @@ def iterate_through(connection, html, cookie, sessionID):
       # Update our data structures.
       links_to_parse[curr_in_queue] = True
       queue.pop(0)
-      print(links_to_parse)
-      print(queue)
+      #print(links_to_parse)
+      #print(queue)
 
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
@@ -114,7 +123,10 @@ def main():
   cookie, sessionID, connection = login()
   initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
   iterate_through(connection, initialHTML, cookie, sessionID)
-  print(links_to_parse)
+  #print(links_to_parse)
+  print("Flags found:")
+  for flag in flags_found:
+      print(flag)
   
 if __name__ == "__main__":
   # Command line specification enforcing.
