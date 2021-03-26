@@ -16,9 +16,16 @@
     - Loops - as discussed in tracking the frontier, we will never visit a page twice.
     - Crawl the target domain - only add urls to the queue if they contain "fring.ccs.neu.edu" within them.
   - Logging in - Reverse engineer the html login form keeping CSRF in mind.
-  - Throughout all of this we will scan every page for urls following the rules we described above and we will also be looking for keys that follow the style of <h2 class='secret_flag' style="color:red">FLAG: 64-characters-of-random-alphanumerics</h2>
+  - Throughout all of this we will scan every page for urls following the rules we described above and we will also be looking for keys that follow the style of class='secret_flag'
+- Beginning to throw down some code:
+  - Absolute first step was formatting the command line interactions.
+  - We then started with the login method which proved to be far more difficult than expected. We figured out quickly that a GET request was required to get the csrf token, then we found there was two required. 
+  - After two days of stuggling with the POST request, we got the cookie we were hungry for and a session id to begin collecting urls to inspect for flags.
+- Page Parsing:
+  - TODO.
 
 ## Challenges:
+- First main challenge we face was getting our POST request formatted. This was partly a product of the project instructions saying we could use http 1.0, but we also did not format our initial GET request to get the two csrf tokens poorly. In addition to this, we needed to look at the developer tools in FireFox to get a good example of what a POST request for that site should look like.
 
 
 
