@@ -97,7 +97,7 @@ def iterate_through(connection, html, cookie, sessionID):
     while len(queue) > 0:
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
-      currhtml = sendGET(connection, curr_in_queue, cookie, sessionID)
+      currhtml = sendGET(connection, curr_in_queue, False, cookie, sessionID)
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
@@ -114,6 +114,7 @@ def main():
   cookie, sessionID, connection = login()
   initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
   iterate_through(connection, initialHTML, cookie, sessionID)
+  print(links_to_parse)
   
 if __name__ == "__main__":
   # Command line specification enforcing.
