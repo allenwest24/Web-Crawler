@@ -11,27 +11,20 @@ def getCookie():
   client.connect(( HOST, PORT ))
 
   # Retrieve csrf token from the current login page.
-  GET_REQUEST = (f"GET /accounts/login/ HTTP/1.0\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
+  GET_REQUEST = (f"GET /accounts/login/ HTTP/1.1\r\nHost:webcrawler-site.ccs.neu.edu\r\n\r\n".encode('utf-8'))
   client.sendall(GET_REQUEST)
-  # Receive header.
+  # Get the GET response.
   response = bytes.decode(client.recv(4096))
-  print( "GET response", response)
-  # Receieve body.
-  #response2 = bytes.decode(client.recv(970))
-  # Find csrftoken in header.
+  # Find csrftoken lcoated in header.
   index1 = response.index("csrftoken")
   # Find csrftoken in body.
   index2 = response.index("csrfmiddlewaretoken")
-  #print("get response part 2", response2)
-  
   # CSRFToken pulled from header of initial GET request.
   csrfToken1 = response[index1+10:index1+74]
   # CSRFToken pulled from the hidden csrfmiddlewaretoken field in body of initial GET request.
   csrfToken2 = response[index2+28:index2+92]
-  print("csrftoken in header of get response: ", csrfToken1)
-  print("csrftoken in hidden body field of get response: ", csrfToken2)
 
-  # Post request with the current csrf token to sign into fakebook.
+  # Forge the POST request with the current csrf token to sign into fakebook.
   usernamePass = "username=" + sys.argv[1] + "&password=" + sys.argv[2]
   payload = "" + usernamePass + "&csrfmiddlewaretoken=" + csrfToken2 + "&next=\r\n"
   POST_REQUEST = (f"POST /accounts/login/ HTTP/1.1\r\n"
@@ -46,8 +39,6 @@ def getCookie():
   "Upgrade-Insecure-Requests: 1\r\n"
   "\r\n"
   + payload + "\r\n")
-  print("post req raw: ", str(len(payload)))
-
   POST_REQUEST = POST_REQUEST.encode('ascii')
 
   # Send the Post request.
