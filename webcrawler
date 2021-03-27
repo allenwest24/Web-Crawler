@@ -13,10 +13,15 @@ def find_flags(html):
     for line in stuff:
         if "secret_flag" in line:
             flags_found.append(line)
+            print(line)
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
-  stuff = html.split('\n')
+  try:
+    stuff = html.split('\n')
+  except:
+    print(html)
+    sys.exit("tuple found")
   for line in stuff:
       if "/fakebook/" in line:
         temp = line.split('"')
@@ -39,6 +44,7 @@ def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = Non
     connection.sendall(get_req) 
     # Return the response we get from the GET request.
     response = bytes.decode(connection.recv(4096))
+    print(response)
     return response
 
 # Method used to retrieeve the log in cookie that will help us stay logged in.
@@ -48,10 +54,10 @@ def login():
   PORT = 80
   connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
   connection.connect(( HOST, PORT ))
-  #response = ""
+  response = ""
   # Retrieve the GET response and pull both csrf tokens from the login page.
-  #while "csrfmiddlewaretoken" not in response or "csrftoken" not in response:
-  response = sendGET(connection, "/accounts/login/", True)
+  while "csrfmiddlewaretoken" not in response or "csrftoken" not in response:
+    response = sendGET(connection, "/accounts/login/", True)
   # Find csrftoken lcoated in header.
   csrf1index = response.index("csrftoken")
   # Find csrftoken in body.
@@ -78,13 +84,14 @@ def login():
   + payload + "\r\n")
   POST_REQUEST = POST_REQUEST.encode('ascii')
 
-  #postResponse = ""
+  postResponse = ""
   # Send the Post request.
-  #while "csrftoken" not in postResponse or "sessionid" not in postResponse:
-  connection.sendall(POST_REQUEST)
-  postResponse = bytes.decode(connection.recv(4096))
-  print(postResponse)
-
+  while "csrftoken" not in postResponse or "sessionid" not in postResponse:
+    connection.sendall(POST_REQUEST)
+    try:
+      postResponse = bytes.decode(connection.recv(4096))
+    except:
+      postResponse = ""
   # Give me the cookie and the sessionID.
   cookieIndex = postResponse.index("csrftoken")
   sessionIDIndex = postResponse.index("sessionid")
@@ -97,16 +104,22 @@ def iterate_through(connection, html, cookie, sessionID):
     # Do the initial html functions on our home page.
     grab_links(html)
     find_flags(html)
+    curr_conn = connection
+    curr_cookie = cookie
+    curr_sessionID = sessionID
 
-    # TODO: Change the way we add new urls to our queue so that this doesn't have to be recursive.
     # While we still have flags to find and links to explore in our queue.
     while len(queue) > 0:
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
-      currhtml = sendGET(connection, curr_in_queue, False, cookie, sessionID)
-      #if '<' not in currhtml:
-      #    cookie, sessionID, connection = login()
-      #    print(curr_in_queue, str(len(currhtml)))
+      currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
+      if '<' not in currhtml:
+          print(currhtml)
+          curr_conn.close()
+          return
+          #curr_cookie, curr_sessionID, curr_conn = login()
+          #currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
+          #print(curr_in_queue, str(len(currhtml)))
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
@@ -121,9 +134,14 @@ def iterate_through(connection, html, cookie, sessionID):
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
   cookie, sessionID, connection = login()
-  initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
+  initialHTML = ""
+  while "/fakebook/" not in initialHTML:
+      initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
   iterate_through(connection, initialHTML, cookie, sessionID)
-  #print(links_to_parse)
+  #while len(queue) > 0:
+      #cookie, sessionID, connection = login()
+      #iterate_through(connection, queue[0], cookie, sessionID)
+  print(links_to_parse)
   print("Flags found:")
   for flag in flags_found:
       print(flag)
