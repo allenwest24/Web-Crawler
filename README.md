@@ -29,6 +29,7 @@
 ## Challenges:
 - First main challenge we face was getting our POST request formatted. This was partly a product of the project instructions saying we could use http 1.0, but we also did not format our initial GET request to get the two csrf tokens poorly. In addition to this, we needed to look at the developer tools in FireFox to get a good example of what a POST request for that site should look like.
 - A challenge was how we were going to store and update urls to view. For instance, when running a while loop on an array, how we would update as we found new urls.
+- Another challenge was the fact that the web server spontaneously starts to send nothing back and closes the connection. This was a major initial hurdle to get over.
 
 ## Testing:
 - The initial primary way of testing was a lot of incremental print statements. Every time we thought something would work, we printed the outcome, specifically responses.
