@@ -6,14 +6,19 @@ import time
 # Our data structures. Dict to store sites we've seen and an array to provide a fresh url we previously found.
 links_to_parse = {}
 queue = []
+flags_found = 0
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
+    global flags_found
     stuff = html.split('\n')
     for line in stuff:
         if "secret_flag" in line:
             index = line.index("FLAG:")
             print(line[index + 6 : index + 70])
+            flags_found += 1
+            if flags_found == 5:
+                sys.exit()
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
@@ -39,7 +44,7 @@ def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = Non
     get_req = get_req.encode('ascii')
     connection.sendall(get_req) 
     # Return the response we get from the GET request.
-    response = bytes.decode(connection.recv(4096))
+    response = bytes.decode(connection.recv(8192))
     return response
 
 # Abstract out the connection method.
@@ -116,7 +121,7 @@ def iterate_through(connection, html, cookie, sessionID):
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
       currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
-      if len(currhtml) == 0:
+      if len(currhtml) == 0: # add the 500 error case in this if statement.
           curr_conn.close()
           time.sleep(1)
           curr_conn = connect()
