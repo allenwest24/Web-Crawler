@@ -6,23 +6,18 @@ import time
 # Our data structures. Dict to store sites we've seen and an array to provide a fresh url we previously found.
 links_to_parse = {}
 queue = []
-flags_found = []
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
     stuff = html.split('\n')
     for line in stuff:
         if "secret_flag" in line:
-            flags_found.append(line)
-            print(line)
+            index = line.index("FLAG:")
+            print(line[index + 6 : index + 70])
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
-  try:
-    stuff = html.split('\n')
-  except:
-    print(html)
-    sys.exit("tuple found")
+  stuff = html.split('\n')
   for line in stuff:
       if "/fakebook/" in line:
         temp = line.split('"')
@@ -53,17 +48,17 @@ def connect():
   HOST = 'webcrawler-site.ccs.neu.edu'
   PORT = 80
   connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-  connection.connect((HOST, PORT))
+  try:
+    connection.connect((HOST, PORT))
+  except:
+    sys.exit("Error: Connection failed. Check VPN.")
   return connection
 
 # Method used to retrieeve the log in cookie that will help us stay logged in.
 def login():
   # Setting up the connection.
-  #HOST = 'webcrawler-site.ccs.neu.edu'
-  #PORT = 80
-  #connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
-  #connection.connect(( HOST, PORT ))
   connection = connect()
+
   response = ""
   # Retrieve the GET response and pull both csrf tokens from the login page.
   while "csrfmiddlewaretoken" not in response or "csrftoken" not in response:
@@ -115,30 +110,18 @@ def iterate_through(connection, html, cookie, sessionID):
     grab_links(html)
     find_flags(html)
     curr_conn = connection
-    curr_cookie = cookie
-    curr_sessionID = sessionID
 
     # While we still have flags to find and links to explore in our queue.
-    #c = 0
     while len(queue) > 0:
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
-      currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
+      currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
       if len(currhtml) == 0:
-          print(curr_in_queue)
           curr_conn.close()
           time.sleep(1)
           curr_conn = connect()
-          currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
-          print(str(len(currhtml)))
-          #c = 0
-      #if c == 20:
-          #curr_conn.close()
-          #curr_conn = connect()
-          #curr_cookie, curr_sessionID, curr_conn = login()
-          #currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
-          #print(curr_in_queue, str(len(currhtml)))
-      #c += 1
+          currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
+      
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
@@ -146,8 +129,6 @@ def iterate_through(connection, html, cookie, sessionID):
       # Update our data structures.
       links_to_parse[curr_in_queue] = True
       queue.pop(0)
-      #print(links_to_parse)
-      #print(queue)
 
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
@@ -157,13 +138,6 @@ def main():
   while "/fakebook/" not in initialHTML:
       initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
   iterate_through(connection, initialHTML, cookie, sessionID)
-  #while len(queue) > 0:
-      #cookie, sessionID, connection = login()
-      #iterate_through(connection, queue[0], cookie, sessionID)
-  print(links_to_parse)
-  print("Flags found:")
-  for flag in flags_found:
-      print(flag)
   
 if __name__ == "__main__":
   # Command line specification enforcing.
