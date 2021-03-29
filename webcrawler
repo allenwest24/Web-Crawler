@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import socket
 import sys
+import time
 
 # Our data structures. Dict to store sites we've seen and an array to provide a fresh url we previously found.
 links_to_parse = {}
@@ -44,16 +45,25 @@ def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = Non
     connection.sendall(get_req) 
     # Return the response we get from the GET request.
     response = bytes.decode(connection.recv(4096))
-    print(response)
     return response
+
+# Abstract out the connection method.
+def connect():
+  # Setting up the connection.
+  HOST = 'webcrawler-site.ccs.neu.edu'
+  PORT = 80
+  connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+  connection.connect((HOST, PORT))
+  return connection
 
 # Method used to retrieeve the log in cookie that will help us stay logged in.
 def login():
   # Setting up the connection.
-  HOST = 'webcrawler-site.ccs.neu.edu'
-  PORT = 80
-  connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
-  connection.connect(( HOST, PORT ))
+  #HOST = 'webcrawler-site.ccs.neu.edu'
+  #PORT = 80
+  #connection = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+  #connection.connect(( HOST, PORT ))
+  connection = connect()
   response = ""
   # Retrieve the GET response and pull both csrf tokens from the login page.
   while "csrfmiddlewaretoken" not in response or "csrftoken" not in response:
@@ -109,17 +119,26 @@ def iterate_through(connection, html, cookie, sessionID):
     curr_sessionID = sessionID
 
     # While we still have flags to find and links to explore in our queue.
+    #c = 0
     while len(queue) > 0:
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
       currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
-      if '<' not in currhtml:
-          print(currhtml)
+      if len(currhtml) == 0:
+          print(curr_in_queue)
           curr_conn.close()
-          return
+          time.sleep(1)
+          curr_conn = connect()
+          currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
+          print(str(len(currhtml)))
+          #c = 0
+      #if c == 20:
+          #curr_conn.close()
+          #curr_conn = connect()
           #curr_cookie, curr_sessionID, curr_conn = login()
           #currhtml = sendGET(curr_conn, curr_in_queue, False, curr_cookie, curr_sessionID)
           #print(curr_in_queue, str(len(currhtml)))
+      #c += 1
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
