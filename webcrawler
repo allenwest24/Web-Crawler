@@ -7,6 +7,7 @@ import time
 links_to_parse = {}
 queue = []
 flags_found = 0
+pages_seen = 0
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
@@ -30,6 +31,20 @@ def grab_links(html):
             if temp[1] not in links_to_parse:
               links_to_parse[temp[1]] = False
               queue.append(temp[1])
+      if "Location" in line:
+          tmp = ""
+          curr = ""
+          ii = line.index("Location") + 10
+          while curr != '\r':
+              curr = line[ii]
+              tmp += curr
+              ii += 1
+          if tmp not in links_to_parse:
+              links_to_parse[tmp] = False
+              queue.append(tmp)
+      if "HTTP/1.1 5" in line:# or "HTTP/1.1 4":
+          queue.append(html)
+          print(html)
 
 # Generic GET request. If not the first time, then add the csrftoken and sessionID.
 def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = None):
@@ -111,6 +126,7 @@ def login():
  
 # Iterate through a built up list of urls in a queue and update them in a dict when they get searched.
 def iterate_through(connection, html, cookie, sessionID):
+    global pages_seen
     # Do the initial html functions on our home page.
     grab_links(html)
     find_flags(html)
@@ -118,15 +134,19 @@ def iterate_through(connection, html, cookie, sessionID):
 
     # While we still have flags to find and links to explore in our queue.
     while len(queue) > 0:
+      pages_seen += 1
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
       currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
-      if len(currhtml) == 0: # add the 500 error case in this if statement.
-          curr_conn.close()
+      if len(currhtml) == 0 or "HTTP/1.1 400" in currhtml: # add the 500 error case in this if statement.
+          try:
+            curr_conn.close()
+          except:
+            print("Already Closed")
           time.sleep(1)
           curr_conn = connect()
           currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
-      
+         # print("After restart: ", currhtml)
       # Search the new html page for new links.
       grab_links(currhtml)
       # Search the new html page for flags.
@@ -138,12 +158,14 @@ def iterate_through(connection, html, cookie, sessionID):
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
+  global pages_seen
   cookie, sessionID, connection = login()
   initialHTML = ""
   while "/fakebook/" not in initialHTML:
       initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
   iterate_through(connection, initialHTML, cookie, sessionID)
-  
+  print(pages_seen)
+
 if __name__ == "__main__":
   # Command line specification enforcing.
   if not(len(sys.argv) == 3):
