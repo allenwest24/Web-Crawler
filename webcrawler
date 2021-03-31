@@ -13,6 +13,7 @@ chunked_off = ""
 body_chunk1 = ""
 body_chunked_huh = False
 prev_size = 0
+flags = []
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
@@ -21,13 +22,12 @@ def find_flags(html):
     for line in stuff:
         if "secret_flag" in line:
             index = line.index("FLAG:")
-            if len(line) < 71:
-                print("divided")
-            print(line[index + 6 : index + 70])
-            flags_found += 1
+            if line[index + 6 : index + 70] not in flags:
+              flags.append(line[index + 6 : index + 70])
+              print(line[index + 6 : index + 70])
+              flags_found += 1
             if flags_found == 5:
-                print(str(flags_found))
-                #sys.exit()
+                sys.exit()
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
@@ -37,8 +37,7 @@ def grab_links(html):
   if chunked:
       tempforchunk = stuff[0].split('"')
       chunked_off += tempforchunk[0]
-      if chunked_off not in links_to_parse and "/fakebook/" in chunked_off:
-        #print("Chunked", chunked_off)
+      if chunked_off not in links_to_parse and "/fakebook/" in chunked_off and chunked_off[len(chunked_off) - 1] == '/':
         links_to_parse[chunked_off] = False
         queue.append(chunked_off)
       chunked = False
@@ -51,7 +50,6 @@ def grab_links(html):
             if temp[1] not in links_to_parse:
               links_to_parse[temp[1]] = False
               queue.append(temp[1])
-              #print(temp[1])
         # If chunked in the middle of a link.
         if len(temp) == 2:
             chunked = True
@@ -192,14 +190,17 @@ def iterate_through(connection, html, cookie, sessionID):
       if "Content-Length:" in currhtml: 
         cli = currhtml.index("Content-Length:")
         ii = cli + 15
-        while currhtml[ii] != '\n':
-          buff += currhtml[ii]
-          ii += 1
+        if '\n' in currhtml:
+          while currhtml[ii] != '\n':
+            buff += currhtml[ii]
+            ii += 1
       if len(buff) > 1 and "<!D" in currhtml:
           size = int(buff)
           body_index = currhtml.index("<!D")
           body = currhtml[body_index:]
           if size != len(body) + 3:
+              redo = queue[0]
+              queue.append(redo)
               prev_size = size
               local_body_chunked_huh = True
               body_chunk1 += body
