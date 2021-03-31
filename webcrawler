@@ -8,6 +8,11 @@ links_to_parse = {}
 queue = []
 flags_found = 0
 pages_seen = 0
+chunked = False
+chunked_off = ""
+body_chunk1 = ""
+body_chunked_huh = False
+prev_size = 0
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
@@ -16,21 +21,44 @@ def find_flags(html):
     for line in stuff:
         if "secret_flag" in line:
             index = line.index("FLAG:")
+            if len(line) < 71:
+                print("divided")
             print(line[index + 6 : index + 70])
             flags_found += 1
             if flags_found == 5:
-                sys.exit()
+                print(str(flags_found))
+                #sys.exit()
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
+  global chunked
+  global chunked_off
   stuff = html.split('\n')
+  if chunked:
+      tempforchunk = stuff[0].split('"')
+      chunked_off += tempforchunk[0]
+      if chunked_off not in links_to_parse and "/fakebook/" in chunked_off:
+        #print("Chunked", chunked_off)
+        links_to_parse[chunked_off] = False
+        queue.append(chunked_off)
+      chunked = False
+      chunked_off = ""
   for line in stuff:
-      if "/fakebook/" in line:
+      if "/f" in line:#akebook/" in line:
         temp = line.split('"')
-        if len(temp) > 1:
+        # If not chunked in the middle of the link.
+        if len(temp) == 3:
             if temp[1] not in links_to_parse:
               links_to_parse[temp[1]] = False
               queue.append(temp[1])
+              #print(temp[1])
+        # If chunked in the middle of a link.
+        if len(temp) == 2:
+            chunked = True
+            if body_chunked_huh:
+              chunked_off = temp[1]
+            else:
+              chunked_off = temp[1]
       if "Location" in line:
           tmp = ""
           curr = ""
@@ -114,7 +142,7 @@ def login():
   while "csrftoken" not in postResponse or "sessionid" not in postResponse:
     connection.sendall(POST_REQUEST)
     try:
-      postResponse = bytes.decode(connection.recv(4096))
+      postResponse = bytes.decode(connection.recv(8192))
     except:
       postResponse = ""
   # Give me the cookie and the sessionID.
@@ -127,6 +155,9 @@ def login():
 # Iterate through a built up list of urls in a queue and update them in a dict when they get searched.
 def iterate_through(connection, html, cookie, sessionID):
     global pages_seen
+    global body_chunk1
+    global body_chunked_huh
+    global prev_size
     # Do the initial html functions on our home page.
     grab_links(html)
     find_flags(html)
@@ -137,7 +168,7 @@ def iterate_through(connection, html, cookie, sessionID):
       pages_seen += 1
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
-      currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
+      currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)      
       if len(currhtml) == 0 or "HTTP/1.1 400" in currhtml: # add the 500 error case in this if statement.
           try:
             curr_conn.close()
@@ -148,7 +179,34 @@ def iterate_through(connection, html, cookie, sessionID):
           currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
          # print("After restart: ", currhtml)
       # Search the new html page for new links.
+      if body_chunked_huh:
+          diff = prev_size - (len(body_chunk1) + 3)
+          body_chunk1 += currhtml
+          grab_links(body_chunk1)
+          find_flags(body_chunk1)
+          prev_size = 0
+          body_chunked_huh = False
+          body_chunk1 = ""
+      buff = ""
+      local_body_chunked_huh = False
+      if "Content-Length:" in currhtml: 
+        cli = currhtml.index("Content-Length:")
+        ii = cli + 15
+        while currhtml[ii] != '\n':
+          buff += currhtml[ii]
+          ii += 1
+      if len(buff) > 1 and "<!D" in currhtml:
+          size = int(buff)
+          body_index = currhtml.index("<!D")
+          body = currhtml[body_index:]
+          if size != len(body) + 3:
+              prev_size = size
+              local_body_chunked_huh = True
+              body_chunk1 += body
+              #grab_links(body + '\n')
+      #if not body_chunked_huh:
       grab_links(currhtml)
+      body_chunked_huh = local_body_chunked_huh
       # Search the new html page for flags.
       find_flags(currhtml)
       # Update our data structures.
