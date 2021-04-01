@@ -39,5 +39,5 @@
 ## Testing:
 - The initial primary way of testing was a lot of incremental print statements. Every time we thought something would work, we printed the outcome, specifically responses.
 - We also tested the command line specifications to ensure we handled invalid inputs correctly.
-- Another way we "stress tested" this program was by writing a small bash script that would execute the code 30 times and let it run overnight. This was to check for consistency.
+- Another way we "stress tested" this program was by writing a small bash script 'runner.sh' that would execute the code 30 times and let it run overnight. This was to check for consistency.
 
