@@ -231,7 +231,9 @@ def iterate_through(connection, html, cookie, sessionID):
           while currhtml[ii] != '\n':
             buff += currhtml[ii]
             ii += 1
-
+            if(ii >= len(currhtml)):
+              break
+            
       # Separate out the body and check the size. Add various parts to global variables.
       if len(buff) > 1 and "<!D" in currhtml:
           size = int(buff)
