@@ -163,7 +163,10 @@ def login():
   postResponse = ""
   # Send the Post request.
   while "csrftoken" not in postResponse or "sessionid" not in postResponse:
-    connection.sendall(POST_REQUEST)
+    try:
+      connection.sendall(POST_REQUEST)
+    except:
+      sys.exit("Incorrect login credentials")
     try:
       postResponse = bytes.decode(connection.recv(8192))
     except:
@@ -224,7 +227,7 @@ def iterate_through(connection, html, cookie, sessionID):
       if "Content-Length:" in currhtml: 
         cli = currhtml.index("Content-Length:")
         ii = cli + 15
-        if '\n' in currhtml:
+        if '\n' in currhtml and ii <= len(currhtml) - 1:
           while currhtml[ii] != '\n':
             buff += currhtml[ii]
             ii += 1
