@@ -17,35 +17,49 @@ flags = []
 
 # Searches given html for one of 5 flags.
 def find_flags(html):
+    # Import global variable.
     global flags_found
+
+    # Split up into different lines and search them instead of looking through the whole HTML.
     stuff = html.split('\n')
     for line in stuff:
+        # If a line contains a secret flag we print it to sys.stdout.
         if "secret_flag" in line:
             index = line.index("FLAG:")
             if line[index + 6 : index + 70] not in flags:
               flags.append(line[index + 6 : index + 70])
               print(line[index + 6 : index + 70])
               flags_found += 1
+            # If we have all 5 unique flags we exit.
             if flags_found == 5:
                 sys.exit()
 
 # This grabs links on the html we are feeding it if it's not already in the dict.
 def grab_links(html):
+  # Import global variables.
   global chunked
   global chunked_off
+
+  # Go through individual lines to avoid parsing the whole HTML page every time.
   stuff = html.split('\n')
+  # If we are globally storing a previously cut off url due to chunking, we want to finish it with the beginning of this response.
   if chunked:
       tempforchunk = stuff[0].split('"')
       chunked_off += tempforchunk[0]
+      # Check for errors and discard if this is the case.
       if chunked_off not in links_to_parse and "/fakebook/" in chunked_off and chunked_off[len(chunked_off) - 1] == '/':
         links_to_parse[chunked_off] = False
         queue.append(chunked_off)
+      # Reset global values for future use.
       chunked = False
       chunked_off = ""
+  
+  # Look for urls within the each line.
   for line in stuff:
-      if "/f" in line:#akebook/" in line:
+      # Standard link found.
+      if "/f" in line:
         temp = line.split('"')
-        # If not chunked in the middle of the link.
+        # If link is in tact.
         if len(temp) == 3:
             if temp[1] not in links_to_parse:
               links_to_parse[temp[1]] = False
@@ -53,30 +67,40 @@ def grab_links(html):
         # If chunked in the middle of a link.
         if len(temp) == 2:
             chunked = True
-            if body_chunked_huh:
-              chunked_off = temp[1]
-            else:
-              chunked_off = temp[1]
+            chunked_off = temp[1]
+      
+      # If this is a 301 error we want to grab the location of the reroute.
       if "Location" in line:
           tmp = ""
           curr = ""
           ii = line.index("Location") + 10
+          # Dynamically build the url.
           while curr != '\r':
               curr = line[ii]
               tmp += curr
               ii += 1
+          # If this link isn't already accounted for, add it to the dict and queue.
           if tmp not in links_to_parse:
               links_to_parse[tmp] = False
               queue.append(tmp)
-      if "HTTP/1.1 5" in line:# or "HTTP/1.1 4":
-          queue.append(html)
-          print(html)
+
+      # If there is an internal server error, re-append onto the queue to try again in a bit.        
+      if "HTTP/1.1 5" in line:
+          redo = queue[0]
+          queue.append(redo)
+
+# If we got to the end of parsed urls and for some reason didn't find all 5, add known urls to the queue and try again.
+def repopulate():
+    for ii in links_to_parse:
+        queue.append(ii)
 
 # Generic GET request. If not the first time, then add the csrftoken and sessionID.
 def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = None):
     # Construct the GET request.
     get_req = (f"GET " + url + " HTTP/1.1\r\n"
     "Host: webcrawler-site.ccs.neu.edu\r\n")
+
+    # If this is the login get request we don't have a sessionID to add yet.
     if not loginHuh:
         get_req += "Cookie: csrftoken=" + csrfToken + "; sessionid=" + sessionID + "\r\n"
     get_req += "\r\n"
@@ -84,6 +108,7 @@ def sendGET(connection, url, loginHuh = False, csrfToken = None, sessionID = Non
     # Encode and send the previosuly constructed GET request.
     get_req = get_req.encode('ascii')
     connection.sendall(get_req) 
+
     # Return the response we get from the GET request.
     response = bytes.decode(connection.recv(8192))
     return response
@@ -143,6 +168,7 @@ def login():
       postResponse = bytes.decode(connection.recv(8192))
     except:
       postResponse = ""
+
   # Give me the cookie and the sessionID.
   cookieIndex = postResponse.index("csrftoken")
   sessionIDIndex = postResponse.index("sessionid")
@@ -152,11 +178,13 @@ def login():
  
 # Iterate through a built up list of urls in a queue and update them in a dict when they get searched.
 def iterate_through(connection, html, cookie, sessionID):
+    # Import the global variables we need here.
     global pages_seen
     global body_chunk1
     global body_chunked_huh
     global prev_size
-    # Do the initial html functions on our home page.
+
+    # Do the initial HTML functions on our home page.
     grab_links(html)
     find_flags(html)
     curr_conn = connection
@@ -166,17 +194,20 @@ def iterate_through(connection, html, cookie, sessionID):
       pages_seen += 1
       curr_in_queue = queue[0]
       # Send GET request to pull down the html for the current url.
-      currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)      
-      if len(currhtml) == 0 or "HTTP/1.1 400" in currhtml: # add the 500 error case in this if statement.
-          try:
-            curr_conn.close()
-          except:
-            print("Already Closed")
+      currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
+
+      # If there was a problem, close connection, open new one, try again.
+      if len(currhtml) == 0 or "HTTP/1.1 400" in currhtml: 
+          curr_conn.close()
           time.sleep(1)
           curr_conn = connect()
           currhtml = sendGET(curr_conn, curr_in_queue, False, cookie, sessionID)
-         # print("After restart: ", currhtml)
-      # Search the new html page for new links.
+
+          # If the retry was just as messed up, add it to the end of the queue and try again in a little bit.
+          if len(currhtml) == 0 or "HTTP/1.1 400" in currhtml:
+              queue.append(curr_in_queue)
+
+      # If the previous response was chunked off, add the rest of it back to itself then do standard checks on it.
       if body_chunked_huh:
           diff = prev_size - (len(body_chunk1) + 3)
           body_chunk1 += currhtml
@@ -185,8 +216,11 @@ def iterate_through(connection, html, cookie, sessionID):
           prev_size = 0
           body_chunked_huh = False
           body_chunk1 = ""
+
+
       buff = ""
       local_body_chunked_huh = False
+      # Check the expected content length in the header to see if its data was chunked mid way through.
       if "Content-Length:" in currhtml: 
         cli = currhtml.index("Content-Length:")
         ii = cli + 15
@@ -194,18 +228,23 @@ def iterate_through(connection, html, cookie, sessionID):
           while currhtml[ii] != '\n':
             buff += currhtml[ii]
             ii += 1
+
+      # Separate out the body and check the size. Add various parts to global variables.
       if len(buff) > 1 and "<!D" in currhtml:
           size = int(buff)
           body_index = currhtml.index("<!D")
           body = currhtml[body_index:]
+
+          # Actual check for if it was chunked.
           if size != len(body) + 3:
               redo = queue[0]
               queue.append(redo)
               prev_size = size
               local_body_chunked_huh = True
               body_chunk1 += body
-              #grab_links(body + '\n')
-      #if not body_chunked_huh:
+
+      # Standard checks on our html pages.
+      # Check for new links.
       grab_links(currhtml)
       body_chunked_huh = local_body_chunked_huh
       # Search the new html page for flags.
@@ -214,20 +253,31 @@ def iterate_through(connection, html, cookie, sessionID):
       links_to_parse[curr_in_queue] = True
       queue.pop(0)
 
+      # If we are done with our queue but we have not exited we need to redo some links.
+      if len(queue) == 0:
+          repopulate()
+
 # Main method for this webcrawler. 
 # Get cookie, start searching for links and flags, maintain queue of valid links left to explore, print out found flags.
 def main():
+  # Import global variable needed.
   global pages_seen
+
+  # Login to get the csrfToken and sessionID.
   cookie, sessionID, connection = login()
+
+  # Do a reliable GET reqeust on our home page.
   initialHTML = ""
   while "/fakebook/" not in initialHTML:
       initialHTML = sendGET(connection, "/fakebook/", False, cookie, sessionID)
+  
+  # With our first html we can now start grabbing links and flags.
   iterate_through(connection, initialHTML, cookie, sessionID)
-  print(pages_seen)
 
 if __name__ == "__main__":
   # Command line specification enforcing.
   if not(len(sys.argv) == 3):
     sys.exit("Usage: ./webcrawler [username] [password]")
+
   # Call the main method.
   main()
