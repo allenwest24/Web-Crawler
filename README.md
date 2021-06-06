@@ -1,5 +1,11 @@
 # Web-Crawler
 
+##Objective:
+- Starting with 1 known social media account homepage, find urls for the remaining ~15,000 accounts and find 5 hidden flags somewhere throughout the social network.
+  - Goal 1: Correctness - Find all 5 flags.
+  - Goal 2: Effiency - Find all 5 flags and report back as soon as possible.
+  - Goal 3: Resiliancy - Adapt to low network performance and chunking caused by HTTP 1.1 GET requests.
+
 ## Efficiency Benefit of this Webcrawler:
 The naive approach for solving the efficiency problem witha  webcrawler would be to keep track of everything we see so that as we encoutner new pages we could see if it was already
 in the table of urls to parse. We implemented this in a way where the search for having already seen a url and selecting a new one to parse could both be done in constant time. By using
