@@ -1,5 +1,11 @@
 # Web-Crawler
 
+## Efficiency Benefit of this Webcrawler:
+The naive approach for solving the efficiency problem witha  webcrawler would be to keep track of everything we see so that as we encoutner new pages we could see if it was already
+in the table of urls to parse. We implemented this in a way where the search for having already seen a url and selecting a new one to parse could both be done in constant time. By using
+an array for the queue of urls to parse next and then using a hashmap to check if we've seen and parsed through correctly, we could ensure full coverage while also not revisiting pages.
+This really speaks to how the use of datastructures could save a ton of time if used correctly (sometiems at the cost of storage space).
+
 ## High-Level Approach:
 - Strategizing before starting:
   - For starters, we tried using HTTP/1.0 to avoid the complication of having to add support chunked responses until we have gotten it to work with HTTP/1.0, then we intended to add support for HTTP/1.1. This did not work because the server only worked with 1.1.
@@ -30,7 +36,7 @@
 - We found various edge cases where the requests or responses would get damaged, and with these we added the urls they came from back into the queue to be traversed again.
 
 ## Challenges:
-- First main challenge we face was getting our POST request formatted. This was partly a product of the project instructions saying we could use http 1.0, but we also did not format our initial GET request to get the two csrf tokens poorly. In addition to this, we needed to look at the developer tools in FireFox to get a good example of what a POST request for that site should look like.
+- First main challenge we face was getting our POST request formatted. This was partly a product of not formatting our initial GET request to get the two csrf tokens correctly. In addition to this, we needed to look at the developer tools in FireFox to get a good example of what a POST request for that site should look like.
 - A challenge was how we were going to store and update urls to view. For instance, when running a while loop on an array, how we would update as we found new urls.
 - Another challenge was the fact that the web server spontaneously starts to send nothing back and closes the connection. This was a major initial hurdle to get over. We handled it by opening a new connection if we get a 400 error or no data in our response.
 - Chunking was also very difficult to solve mainly because it was hard to create a consistent way of testing.
