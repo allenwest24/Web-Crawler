@@ -1,6 +1,6 @@
 # Web-Crawler
 
-##Objective:
+## Objective:
 - Starting with 1 known social media account homepage, find urls for the remaining ~15,000 accounts and find 5 hidden flags somewhere throughout the social network.
   - Goal 1: Correctness - Find all 5 flags.
   - Goal 2: Effiency - Find all 5 flags and report back as soon as possible.
